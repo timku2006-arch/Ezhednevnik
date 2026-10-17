@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="Личный ежедневник: задачи на день и заметки" />
+  <meta name="theme-color" content="#f4f5fb" />
+  <title>Ежедневник</title>
+  <!-- Применяем сохранённую тему до отрисовки, чтобы не было вспышки -->
+  <script>
+    (function () {
+      try {
+        var saved = JSON.parse(localStorage.getItem('ezhednevnik:v1') || '{}').theme;
+        var dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      } catch (e) { document.documentElement.dataset.theme = 'light'; }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237c5cff'/%3E%3Cstop offset='1' stop-color='%234f8cff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='url(%23g)'/%3E%3Cpath d='M19 33l9 9 17-19' stroke='white' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+</head>
+<body>
+  <!-- Спрайт иконок -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 5 4 4v2H6v-2l4-4-1-5z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 13.2A8.5 8.5 0 1 1 10.8 3a6.6 6.6 0 0 0 10.2 10.2z"/></symbol>
+    <symbol id="i-check-list" viewBox="0 0 24 24"><path d="M4 6l1.5 1.5L8 5M4 12l1.5 1.5L8 11M4 18l1.5 1.5L8 17M12 6h8M12 12h8M12 18h8"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4M9 12h6M9 16h4"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  </svg>
+
+  <div class="bg-blobs" aria-hidden="true"><span></span><span></span><span></span></div>
+
+  <div class="app" id="app" data-tab="tasks">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand__logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>
+        </div>
+        <div>
+          <h1 class="brand__title">Ежедневник</h1>
+          <p class="brand__greeting" id="greeting">Добрый день</p>
+        </div>
+      </div>
+      <button class="icon-btn theme-toggle" id="themeToggle" type="button" aria-label="Переключить тему">
+        <svg class="theme-toggle__sun"><use href="#i-sun"/></svg>
+        <svg class="theme-toggle__moon"><use href="#i-moon"/></svg>
+      </button>
+    </header>
+
+    <main class="layout">
+      <!-- ===== Задачи ===== -->
+      <section class="panel panel--tasks" id="panelTasks" aria-labelledby="tasksHeading">
+        <div class="card day-card">
+          <div class="day-nav">
+            <button class="icon-btn" id="prevDay" type="button" aria-label="Предыдущий день">
+              <svg><use href="#i-chevron-left"/></svg>
+            </button>
+            <div class="day-nav__title" id="dayTitleWrap">
+              <h2 id="tasksHeading" class="day-nav__date">—</h2>
+              <p class="day-nav__sub" id="daySub">—</p>
+            </div>
+            <button class="icon-btn" id="nextDay" type="button" aria-label="Следующий день">
+              <svg><use href="#i-chevron-right"/></svg>
+            </button>
+          </div>
+
+          <div class="day-chips" role="group" aria-label="Быстрый выбор дня">
+            <button class="chip" data-shift="-1" type="button">Вчера</button>
+            <button class="chip" data-shift="0" type="button">Сегодня</button>
+            <button class="chip" data-shift="1" type="button">Завтра</button>
+            <button class="chip chip--icon" id="calendarBtn" type="button" aria-haspopup="dialog" aria-label="Открыть календарь">
+              <svg><use href="#i-calendar"/></svg><span>Календарь</span>
+            </button>
+          </div>
+
+          <div class="progress">
+            <div class="ring" id="ring">
+              <svg viewBox="0 0 120 120" aria-hidden="true">
+                <defs>
+                  <linearGradient id="ringGradient" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="var(--accent-1)"/>
+                    <stop offset="1" stop-color="var(--accent-2)"/>
+                  </linearGradient>
+                </defs>
+                <circle class="ring__track" cx="60" cy="60" r="50"/>
+                <circle class="ring__value" id="ringValue" cx="60" cy="60" r="50"/>
+              </svg>
+              <div class="ring__label"><span id="ringPercent">0</span><small>%</small></div>
+            </div>
+            <div class="progress__text">
+              <p class="progress__count" id="progressCount">Нет задач</p>
+              <div class="bar" aria-hidden="true"><div class="bar__fill" id="barFill"></div></div>
+              <p class="progress__hint" id="progressHint">Добавьте первую задачу на этот день</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card tasks-card">
+          <form class="add-form" id="taskForm" autocomplete="off">
+            <input class="input" id="taskInput" type="text" maxlength="200" placeholder="Что нужно сделать?" aria-label="Новая задача" />
+            <button class="btn btn--primary btn--round" type="submit" aria-label="Добавить задачу">
+              <svg><use href="#i-plus"/></svg>
+            </button>
+          </form>
+          <ul class="task-list" id="taskList" aria-live="polite"></ul>
+          <div class="empty" id="tasksEmpty" hidden>
+            <div class="empty__icon"><svg><use href="#i-check-list"/></svg></div>
+            <p>Задач на этот день пока нет</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Заметки ===== -->
+      <section class="panel panel--notes" id="panelNotes" aria-labelledby="notesHeading">
+        <div class="notes-head">
+          <h2 id="notesHeading" class="section-title">Заметки</h2>
+          <button class="btn btn--primary" id="newNoteBtn" type="button">
+            <svg><use href="#i-plus"/></svg><span>Новая заметка</span>
+          </button>
+        </div>
+        <label class="search">
+          <svg><use href="#i-search"/></svg>
+          <input class="search__input" id="noteSearch" type="search" placeholder="Поиск по заметкам" aria-label="Поиск по заметкам" />
+        </label>
+        <div class="notes-grid" id="notesGrid"></div>
+        <div class="empty" id="notesEmpty" hidden>
+          <div class="empty__icon"><svg><use href="#i-note"/></svg></div>
+          <p id="notesEmptyText">Здесь появятся ваши заметки</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Нижняя навигация (только на телефоне) -->
+    <nav class="tabbar" aria-label="Разделы">
+      <span class="tabbar__indicator" aria-hidden="true"></span>
+      <button class="tabbar__btn is-active" data-tab="tasks" type="button">
+        <svg><use href="#i-check-list"/></svg><span>Задачи</span>
+      </button>
+      <button class="tabbar__btn" data-tab="notes" type="button">
+        <svg><use href="#i-note"/></svg><span>Заметки</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Календарь -->
+  <div class="calendar" id="calendar" role="dialog" aria-label="Календарь" hidden>
+    <div class="calendar__head">
+      <button class="icon-btn icon-btn--sm" id="calPrev" type="button" aria-label="Предыдущий месяц"><svg><use href="#i-chevron-left"/></svg></button>
+      <span class="calendar__month" id="calMonth"></span>
+      <button class="icon-btn icon-btn--sm" id="calNext" type="button" aria-label="Следующий месяц"><svg><use href="#i-chevron-right"/></svg></button>
+    </div>
+    <div class="calendar__weekdays"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
+    <div class="calendar__grid" id="calGrid"></div>
+    <button class="btn btn--ghost calendar__today" id="calToday" type="button">Сегодня</button>
+  </div>
+
+  <!-- Редактор заметки -->
+  <dialog class="modal" id="noteDialog" aria-labelledby="noteDialogTitle">
+    <form class="modal__body" id="noteForm" method="dialog" autocomplete="off">
+      <div class="modal__head">
+        <h3 id="noteDialogTitle">Новая заметка</h3>
+        <button class="icon-btn icon-btn--sm" type="button" data-close aria-label="Закрыть"><svg><use href="#i-x"/></svg></button>
+      </div>
+      <input class="input" id="noteTitle" type="text" maxlength="120" placeholder="Заголовок" aria-label="Заголовок" />
+      <textarea class="input textarea" id="noteText" rows="6" placeholder="Текст заметки…" aria-label="Текст заметки"></textarea>
+      <div class="swatches" id="noteColors" role="radiogroup" aria-label="Цвет карточки"></div>
+      <div class="modal__actions">
+        <button class="btn btn--ghost" type="button" data-close>Отмена</button>
+        <button class="btn btn--primary" type="submit">Сохранить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/confetti.js"></script>
+  <script src="js/calendar.js"></script>
+  <script src="js/tasks.js"></script>
+  <script src="js/notes.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
